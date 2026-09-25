@@ -1,1 +1,81 @@
+<!doctype html><html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123f73"><link rel="manifest" href="manifest.json">
+<title>خدمة الأسر</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#16324f;font-family:Arial,Tahoma,sans-serif}
+header{background:#123f73;color:white;padding:18px 16px}header h1{margin:0}header p{margin:5px 0}
+main{max-width:760px;margin:auto;padding:15px 12px 85px}.card{background:white;border-radius:20px;padding:18px;margin:12px 0;box-shadow:0 4px 18px #123f7312}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stat{background:#edf4ff;border-radius:18px;padding:18px;text-align:center}.stat b{display:block;font-size:32px;margin-top:7px}
+button{border:0;border-radius:13px;padding:13px 16px;font-size:16px;background:#1976b8;color:white;margin:4px;cursor:pointer}.secondary{background:#e9eef5;color:#17344f}.danger{background:#c62828}.full{width:100%}
+input,textarea,select{width:100%;padding:13px;border:1px solid #ccd6e2;border-radius:12px;font-size:16px;margin:6px 0 12px}label{font-weight:bold}.row{display:flex;gap:8px;flex-wrap:wrap}
+.hidden{display:none!important}.family{border:1px solid #e0e6ee;border-radius:15px;padding:13px;margin:10px 0}.muted{color:#6b7785}.error{color:#b00020}.notice{background:#fff5d8;border-radius:14px;padding:12px;color:#684d00}
+nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #ddd;display:flex;justify-content:space-around;padding:7px;z-index:10}nav button{background:transparent;color:#28445d;font-size:14px}
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.login .card{max-width:520px;width:100%;text-align:center}.icon{font-size:45px}
+.badge{display:inline-block;padding:5px 9px;border-radius:10px;background:#eaf2ff;margin:3px}
+</style></head><body>
 
+<section id="loginView" class="login"><div class="card">
+<div class="icon">✝️</div><h1>خدمة الأسر</h1><p>بيانات الأسر محفوظة ومشفّرة على هذا الجهاز.</p>
+<div id="setupBox"><h2>إنشاء كلمة سر</h2><p class="muted">كلمة السر هي مفتاح تشفير البيانات والنسخ الاحتياطية.</p>
+<input id="newPass" type="password" placeholder="كلمة سر جديدة"><input id="newPass2" type="password" placeholder="تأكيد كلمة السر">
+<button class="full" onclick="createPassword()">إنشاء وحماية التطبيق</button></div>
+<div id="unlockBox" class="hidden"><h2>فتح التطبيق 🔐</h2><input id="pass" type="password" placeholder="أدخل كلمة السر">
+<button class="full" onclick="unlock()">دخول</button><p id="loginMsg" class="error"></p></div>
+</div></section>
+
+<div id="app" class="hidden"><header><h1>✝ خدمة الأسر</h1><p>إدارة بيانات الأسر واجتماع المتزوجين</p></header><main>
+<section id="home" class="page"><div class="card"><h2>مرحبًا 👋</h2><p>البيانات مشفّرة ومحفوظة على هذا الجهاز.</p></div>
+<div class="grid"><div class="stat">الأسر<b id="familyCount">0</b></div><div class="stat">آخر اجتماع<b id="lastMeeting">—</b></div></div>
+<div class="card"><h2>الحماية</h2><button onclick="showPage('settings')">🔐 الحماية والنسخ الاحتياطي</button><button class="secondary" onclick="lockApp()">🔒 قفل الآن</button></div></section>
+
+<section id="families" class="page hidden"><div class="card"><h2>الأسر</h2><input id="search" placeholder="ابحث باسم أو هاتف أو عنوان" oninput="renderFamilies()"><button onclick="openFamilyForm()">➕ إضافة أسرة</button><div id="familyList"></div></div></section>
+
+<section id="attendance" class="page hidden"><div class="card"><h2>الحضور</h2><label>تاريخ الاجتماع</label><input id="attDate" type="date"><button onclick="saveAttendance()">💾 حفظ الحضور</button><div id="attendanceList"></div></div></section>
+
+<section id="reports" class="page hidden"><div class="card"><h2>التقارير</h2><div id="reportBox"></div></div></section>
+
+<section id="settings" class="page hidden"><div class="card"><h2>🔐 الحماية</h2>
+<div class="notice">تشفير AES-GCM مع اشتقاق مفتاح PBKDF2. كلمة السر نفسها لا تُحفظ. القفل التلقائي بعد 5 دقائق.</div>
+<h3>تغيير كلمة السر</h3><input id="oldPass" type="password" placeholder="كلمة السر الحالية"><input id="changePass1" type="password" placeholder="كلمة السر الجديدة"><input id="changePass2" type="password" placeholder="تأكيد كلمة السر الجديدة"><button onclick="changePassword()">تغيير كلمة السر</button>
+<h3>نسخة احتياطية مشفّرة</h3><p class="muted">النسخة لا تُفتح إلا بكلمة سرها.</p><button onclick="backup()">⬇️ تصدير نسخة</button>
+<label style="display:block;background:#e9eef5;color:#17344f;border-radius:13px;padding:13px;text-align:center;margin:5px;cursor:pointer">⬆️ استرجاع نسخة<input id="restoreFile" type="file" accept=".json,.khedmeta" style="display:none" onchange="restoreBackup(this.files[0])"></label>
+<h3>مسح البيانات</h3><button class="danger" onclick="wipeAll()">🗑️ مسح كل البيانات</button></div></section>
+
+<section id="familyForm" class="page hidden"><div class="card"><h2 id="formTitle">إضافة أسرة</h2><input id="editId" type="hidden">
+<label>اسم الزوج</label><input id="husband"><label>هاتف الزوج</label><input id="husPhone" inputmode="tel"><label>اسم الزوجة</label><input id="wife"><label>هاتف الزوجة</label><input id="wifePhone" inputmode="tel"><label>العنوان</label><textarea id="address"></textarea><label>الأبناء</label><textarea id="children"></textarea><label>ملاحظات</label><textarea id="notes"></textarea>
+<button onclick="saveFamily()">💾 حفظ</button><button class="secondary" onclick="showPage('families')">إلغاء</button></div></section>
+</main><nav><button onclick="showPage('home')">🏠<br>الرئيسية</button><button onclick="showPage('families')">👨‍👩‍👧<br>الأسر</button><button onclick="showPage('attendance')">📋<br>الحضور</button><button onclick="showPage('reports')">📊<br>التقارير</button></nav></div>
+
+<script>
+const STORE='khedmet_alosar_secure_v1';let key=null,vault={families:[],attendance:{}},lastActivity=Date.now(),timer;
+const $=id=>document.getElementById(id),enc=new TextEncoder(),dec=new TextDecoder();
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))),unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function derive(p,s){let b=await crypto.subtle.importKey('raw',enc.encode(p),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:s,iterations:210000,hash:'SHA-256'},b,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function encrypt(o,p,s){s=s||crypto.getRandomValues(new Uint8Array(16));let k=await derive(p,s),iv=crypto.getRandomValues(new Uint8Array(12)),d=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,enc.encode(JSON.stringify(o)));return{v:1,salt:b64(s),iv:b64(iv),data:b64(d)}}
+async function decrypt(x,p){let k=await derive(p,unb64(x.salt)),d=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(x.iv)},k,unb64(x.data));return JSON.parse(dec.decode(d))}
+const read=()=>JSON.parse(localStorage.getItem(STORE)||'null');
+async function save(){localStorage.setItem(STORE,JSON.stringify(await encrypt(vault,key)))}
+function init(){let b=read();$('setupBox').classList.toggle('hidden',!!b);$('unlockBox').classList.toggle('hidden',!b)}
+function okp(p){return p&&p.length>=6}
+async function createPassword(){let p=$('newPass').value,q=$('newPass2').value;if(!okp(p))return alert('كلمة السر يجب أن تكون 6 أحرف/أرقام على الأقل.');if(p!==q)return alert('التأكيد غير مطابق.');vault={families:[],attendance:{}};key=p;await save();openApp()}
+async function unlock(){try{vault=await decrypt(read(),$('pass').value);key=$('pass').value;openApp()}catch(e){$('loginMsg').textContent='كلمة المرور غير صحيحة.'}}
+function openApp(){$('loginView').classList.add('hidden');$('app').classList.remove('hidden');renderAll();clearInterval(timer);timer=setInterval(()=>{if(key&&Date.now()-lastActivity>300000)lockApp()},30000)}
+function lockApp(){key=null;$('app').classList.add('hidden');$('loginView').classList.remove('hidden');$('pass').value='';init()}
+['click','keydown','touchstart'].forEach(e=>document.addEventListener(e,()=>lastActivity=Date.now(),{passive:true}));
+function showPage(id){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));$(id).classList.remove('hidden');if(id==='families')renderFamilies();if(id==='attendance')renderAttendance();if(id==='reports')renderReports()}
+function renderAll(){renderFamilies();renderAttendance();renderReports();$('familyCount').textContent=vault.families.length;let d=Object.keys(vault.attendance).sort().pop();$('lastMeeting').textContent=d||'—'}
+function openFamilyForm(id=''){let f=vault.families.find(x=>x.id===id);$('editId').value=id;$('formTitle').textContent=id?'تعديل أسرة':'إضافة أسرة';['husband','husPhone','wife','wifePhone','address','children','notes'].forEach(k=>$(k).value=f?.[k]||'');showPage('familyForm')}
+async function saveFamily(){let id=$('editId').value||crypto.randomUUID(),f={id};['husband','husPhone','wife','wifePhone','address','children','notes'].forEach(k=>f[k]=$(k).value.trim());if(!f.husband&&!f.wife)return alert('اكتب اسم الزوج أو الزوجة.');let i=vault.families.findIndex(x=>x.id===id);i>=0?vault.families[i]=f:vault.families.push(f);await save();renderAll();showPage('families')}
+function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function renderFamilies(){let q=($('search')?.value||'').toLowerCase(),a=vault.families.filter(f=>[f.husband,f.wife,f.husPhone,f.wifePhone,f.address].join(' ').toLowerCase().includes(q));$('familyList').innerHTML=a.length?a.map(f=>`<div class="family"><b>${esc(f.husband||'بدون اسم')} & ${esc(f.wife||'بدون اسم')}</b><div class="muted">${esc(f.husPhone||'')} ${f.wifePhone?' • '+esc(f.wifePhone):''}</div><div>${f.address?'📍 '+esc(f.address):''}</div><button onclick="openFamilyForm('${f.id}')">تعديل</button><button class="danger" onclick="deleteFamily('${f.id}')">حذف</button></div>`).join(''):'<p class="muted">لا توجد أسر.</p>'}
+async function deleteFamily(id){if(!confirm('حذف الأسرة؟'))return;vault.families=vault.families.filter(x=>x.id!==id);Object.values(vault.attendance).forEach(d=>delete d[id]);await save();renderAll()}
+function renderAttendance(){let d=$('attDate').value||new Date().toISOString().slice(0,10);$('attDate').value=d;let day=vault.attendance[d]||{};$('attendanceList').innerHTML=vault.families.map(f=>`<div class="family"><b>${esc(f.husband)} & ${esc(f.wife)}</b><select data-a="${f.id}"><option value="">لم يسجل</option><option value="present" ${day[f.id]=='present'?'selected':''}>حاضر</option><option value="absent" ${day[f.id]=='absent'?'selected':''}>غائب</option><option value="excused" ${day[f.id]=='excused'?'selected':''}>معتذر</option></select></div>`).join('')||'<p class="muted">أضف الأسر أولًا.</p>'}
+async function saveAttendance(){let d=$('attDate').value,day={};document.querySelectorAll('[data-a]').forEach(s=>{if(s.value)day[s.dataset.a]=s.value});vault.attendance[d]=day;await save();renderAll();alert('تم حفظ الحضور.')}
+function renderReports(){let ds=Object.keys(vault.attendance).sort().reverse();$('reportBox').innerHTML=ds.length?ds.map(d=>{let c={present:0,absent:0,excused:0};Object.values(vault.attendance[d]).forEach(v=>c[v]++);return`<div class="family"><b>📅 ${d}</b><div><span class="badge">حاضر: ${c.present}</span><span class="badge">غائب: ${c.absent}</span><span class="badge">معتذر: ${c.excused}</span></div></div>`}).join(''):'<p class="muted">لا توجد اجتماعات.</p>'}
+async function changePassword(){let o=$('oldPass').value,n=$('changePass1').value,q=$('changePass2').value;try{await decrypt(read(),o)}catch{return alert('كلمة السر الحالية غير صحيحة.')}if(!okp(n))return alert('كلمة السر الجديدة 6 أحرف/أرقام على الأقل.');if(n!==q)return alert('التأكيد غير مطابق.');key=n;await save();alert('تم تغيير كلمة السر وإعادة تشفير البيانات.')}
+async function backup(){let p={app:'خدمة الأسر',type:'encrypted-backup',created:new Date().toISOString(),blob:await encrypt(vault,key)},a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(p)],{type:'application/json'}));a.download='khedmet-alosar-backup.khedmeta';a.click()}
+async function restoreBackup(file){try{let p=JSON.parse(await file.text()),pass=prompt('أدخل كلمة سر النسخة الاحتياطية'),v=await decrypt(p.blob,pass);if(!v.families)throw 0;vault=v;await save();renderAll();alert('تم استرجاع النسخة بنجاح.')}catch(e){alert('تعذر الاسترجاع. تأكد من الملف وكلمة السر.')}}
+function wipeAll(){if(confirm('حذف كل البيانات من هذا الجهاز؟')){localStorage.removeItem(STORE);location.reload()}}
+$('attDate').addEventListener('change',renderAttendance);init();
+</script></body></html>
